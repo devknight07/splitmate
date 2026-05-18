@@ -1,8 +1,8 @@
-const CACHE_NAME = 'splitmate-v1';
+const CACHE_NAME = 'splitmate-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
 ];
 
 self.addEventListener('install', (e) => {
@@ -22,7 +22,11 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Never intercept cross-origin requests (API calls to InfinityFree)
+  if (new URL(e.request.url).origin !== self.location.origin) return;
+  // Never intercept non-GET requests
   if (e.request.method !== 'GET') return;
+
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(resp => {
