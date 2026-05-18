@@ -2296,7 +2296,7 @@ body {
 // ============================================================
 // APP STATE & CONFIG
 // ============================================================
-const API_BASE = 'https://if0-41950675.infinityfreeapp.com/splitmate/api';
+const API_BASE = 'https://devknight07.infinityfree.me/splitmate/api';
 
 const AppState = {
   currentScreen: 'loading-screen',
@@ -2367,18 +2367,34 @@ async function api(method, path, body = null) {
   };
   if (token) opts.headers['Authorization'] = `Bearer ${token}`;
   if (body) opts.body = JSON.stringify(body);
+
+  let res;
   try {
-    const res = await fetch(`${API_BASE}${path}`, opts);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data;
+    res = await fetch(`${API_BASE}${path}`, opts);
   } catch (err) {
-    // If network error (XAMPP not running), show helpful message
-    if (err.name === 'TypeError' && err.message.includes('fetch')) {
-      throw new Error('Cannot connect to server. Is XAMPP running?');
+    // Network-level failure: no internet, CORS preflight blocked,
+    // server unreachable, or DNS failure.
+    // err.name === 'TypeError' covers: "Failed to fetch" (Chrome/Android),
+    // "Load failed" (iOS Safari), "Network request failed" (React Native).
+    const isNetworkErr = err.name === 'TypeError' || err.name === 'NetworkError';
+    if (isNetworkErr) {
+      throw new Error('No internet connection or server unreachable. Please check your connection and try again.');
     }
     throw err;
   }
+
+  // Server responded — parse JSON
+  let data;
+  try {
+    data = await res.json();
+  } catch (_) {
+    throw new Error(`Server error (HTTP ${res.status}). Please try again.`);
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || data.message || `Server error (HTTP ${res.status})`);
+  }
+  return data;
 }
 
 // ============================================================
